@@ -11,7 +11,8 @@ SOCKET_IP = "tcp://127.0.0.1:5555"
 def main(demo_handle, control_rate=50.):
     """
     Entry point for control demos.
-    Moves lift proportional to wrist_pitch effort with velocity control.
+    Invokes the demo handle and loads it onto a thread.
+    Communication (stop demo via keyboard input) handled with sockets.
     
     Args:
         control_rate (float): The control rate in Hz.
