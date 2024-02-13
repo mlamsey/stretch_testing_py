@@ -30,7 +30,7 @@ def open_socket_listener() -> tuple:
     Returns:
         tuple: A tuple containing the socket and poller objects.
     """
-    
+
     context = zmq.Context()
     socket = context.socket(zmq.SUB)
     socket.bind(SOCKET_IP)
@@ -40,7 +40,7 @@ def open_socket_listener() -> tuple:
     poller.register(socket, zmq.POLLIN)
     return socket, poller
 
-def callback(robot: Robot, control_rate: float=50.):  # Max wait time in milliseconds
+def lift_control(robot: Robot, control_rate: float=50.):  # Max wait time in milliseconds
     """
     Controller callback.
     Listens for messages from main thread.
@@ -80,13 +80,21 @@ def callback(robot: Robot, control_rate: float=50.):  # Max wait time in millise
                 if message == 'q':
                     break
 
-def main():
+def main(control_rate=50.):
+    """
+    Entry point for lift control demo.
+    Moves lift proportional to wrist_pitch effort with velocity control.
+    
+    Args:
+        control_rate (float): The control rate in Hz.
+    """
+    
     # set up robot
     robot = Robot()
     robot.startup()
     
     # Start the callback on a separate thread
-    thread = threading.Thread(target=callback, args=(robot, 50.))
+    thread = threading.Thread(target=lift_control, args=(robot, control_rate))
     thread.start()
 
     # Send messages using PyZMQ
