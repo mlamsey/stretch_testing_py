@@ -2,26 +2,62 @@ import zmq
 import threading
 from stretch_body.robot import Robot
 
-def callback(robot, control_rate=50.):  # Max wait time in milliseconds
+SOCKET_IP = "tcp://127.0.0.1:5555"
+
+def compute_velocity(effort_error: float, deadband: float=2.0, Kp: float=0.01) -> float:
+    """
+    Computes lift velocity based on an effort value.
+    For this demo, recommended to use wrist_pitch effort.
+    
+    Args:
+        effort_error (float): The difference between the current effort and the desired effort.
+        deadband (float): The range of effort values that will result in no velocity command.
+        Kp (float): Proportional gain for the controller.
+
+    Returns:
+        float: The velocity command to be sent to the lift joint.
+    """
+
+    if abs(effort_error) > deadband:
+        return Kp * effort_error
+    else:
+        return 0.
+    
+def open_socket_listener() -> tuple:
+    """
+    Opens a zmq socket to listen for messages.
+
+    Returns:
+        tuple: A tuple containing the socket and poller objects.
+    """
+    
+    context = zmq.Context()
+    socket = context.socket(zmq.SUB)
+    socket.bind(SOCKET_IP)
+    socket.setsockopt_string(zmq.SUBSCRIBE, '')
+
+    poller = zmq.Poller()
+    poller.register(socket, zmq.POLLIN)
+    return socket, poller
+
+def callback(robot: Robot, control_rate: float=50.):  # Max wait time in milliseconds
+    """
+    Controller callback.
+    Listens for messages from main thread.
+    Controls the lift joint based on the effort of the wrist_pitch joint.
+
+    Args:
+        robot (Robot): The Stretch object.
+        control_rate (float): The control rate in Hz.
+    """
+
     # parse args
     max_wait_time = 1000. / control_rate
     
     # other init
     initial_wrist_effort = robot.end_of_arm.status['wrist_pitch']['effort']
-    deadband = 2.0
-    # v = 0.03
 
-    # control gains
-    Kp = 0.01
-
-    # set up message handling
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.bind("tcp://127.0.0.1:5555")
-    socket.setsockopt_string(zmq.SUBSCRIBE, '')
-
-    poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
+    socket, poller = open_socket_listener()
 
     while True:
         # poll end of arm status
@@ -29,15 +65,10 @@ def callback(robot, control_rate=50.):  # Max wait time in milliseconds
         pitch_status = end_of_arm_status['wrist_pitch']
         effort = pitch_status['effort']
         
-        # control the lift based on the wrist pitch effort
-        if abs(effort - initial_wrist_effort) > deadband:
-            e = effort - initial_wrist_effort
-            v = Kp * e
-            print("Effort: ", effort, "Velocity: ", v)
-            robot.lift.set_velocity(v)
-        else:
-            robot.lift.set_velocity(0.)
-
+        # compute and command velocity
+        e = effort - initial_wrist_effort
+        v = compute_velocity(e)
+        robot.lift.set_velocity(v)
         robot.push_command()
         
         # Check for messages and sleep
@@ -61,7 +92,7 @@ def main():
     # Send messages using PyZMQ
     context = zmq.Context()
     socket = context.socket(zmq.PUB)
-    socket.connect("tcp://127.0.0.1:5555")
+    socket.connect(SOCKET_IP)
 
     # UI loop
     while True:
