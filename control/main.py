@@ -15,6 +15,7 @@ def main(demo_handle, control_rate=50.):
     Communication (stop demo via keyboard input) handled with sockets.
     
     Args:
+        demo_handle (function handle): robot demo to run on a separate thread
         control_rate (float): The control rate in Hz.
     """
     
