@@ -1,8 +1,6 @@
 import zmq
-import threading
 from stretch_body.robot import Robot
-
-SOCKET_IP = "tcp://127.0.0.1:5555"
+from utils import open_socket_listener
 
 def compute_velocity(effort_error: float, deadband: float=2.0, Kp: float=0.01) -> float:
     """
@@ -22,25 +20,8 @@ def compute_velocity(effort_error: float, deadband: float=2.0, Kp: float=0.01) -
         return Kp * effort_error
     else:
         return 0.
-    
-def open_socket_listener() -> tuple:
-    """
-    Opens a zmq socket to listen for messages.
 
-    Returns:
-        tuple: A tuple containing the socket and poller objects.
-    """
-
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.bind(SOCKET_IP)
-    socket.setsockopt_string(zmq.SUBSCRIBE, '')
-
-    poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
-    return socket, poller
-
-def lift_control(robot: Robot, control_rate: float=50.):  # Max wait time in milliseconds
+def lift_control(robot: Robot, socket_ip: str, control_rate: float=50.):  # Max wait time in milliseconds
     """
     Controller callback.
     Listens for messages from main thread.
@@ -57,7 +38,7 @@ def lift_control(robot: Robot, control_rate: float=50.):  # Max wait time in mil
     # other init
     initial_wrist_effort = robot.end_of_arm.status['wrist_pitch']['effort']
 
-    socket, poller = open_socket_listener()
+    socket, poller = open_socket_listener(socket_ip)
 
     while True:
         # poll end of arm status
@@ -80,38 +61,5 @@ def lift_control(robot: Robot, control_rate: float=50.):  # Max wait time in mil
                 if message == 'q':
                     break
 
-def main(control_rate=50.):
-    """
-    Entry point for lift control demo.
-    Moves lift proportional to wrist_pitch effort with velocity control.
-    
-    Args:
-        control_rate (float): The control rate in Hz.
-    """
-    
-    # set up robot
-    robot = Robot()
-    robot.startup()
-    
-    # Start the callback on a separate thread
-    thread = threading.Thread(target=lift_control, args=(robot, control_rate))
-    thread.start()
-
-    # Send messages using PyZMQ
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect(SOCKET_IP)
-
-    # UI loop
-    while True:
-        message = input("Enter message to send (type 'q' to quit): ")
-        socket.send_string(message)
-        if message.lower() == 'q':
-            robot.stop()
-            break
-
-    # Wait for the thread to finish
-    thread.join()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    print("This file is not meant to be run directly. Run main.py instead.")

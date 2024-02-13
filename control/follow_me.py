@@ -1,11 +1,8 @@
 import zmq
-import threading
 import numpy as np
 from typing import List
 from stretch_body.robot import Robot
-import json
-
-SOCKET_IP = "tcp://127.0.0.1:5555"
+from utils import open_socket_listener
 
 def compute_velocity(error_vector: List[float], deadband: float=2.0, Kp: List[float]=[0.02, 0.1]) -> List[float]:
     """
@@ -39,23 +36,6 @@ def compute_velocity(error_vector: List[float], deadband: float=2.0, Kp: List[fl
 
     # print(error_vector, [v, w])
     return [v, w]
-    
-def open_socket_listener() -> tuple:
-    """
-    Opens a zmq socket to listen for messages.
-
-    Returns:
-        tuple: A tuple containing the socket and poller objects.
-    """
-
-    context = zmq.Context()
-    socket = context.socket(zmq.SUB)
-    socket.bind(SOCKET_IP)
-    socket.setsockopt_string(zmq.SUBSCRIBE, '')
-
-    poller = zmq.Poller()
-    poller.register(socket, zmq.POLLIN)
-    return socket, poller
 
 def get_wrist_effort(robot: Robot) -> np.ndarray:
     """
@@ -102,7 +82,7 @@ def get_state_vector(robot: Robot) -> np.ndarray:
     arm_effort = get_arm_effort(robot)
     return np.concatenate([wrist_effort, [arm_effort]])
 
-def follow_me(robot: Robot, control_rate: float=50.):  # Max wait time in milliseconds
+def follow_me(robot: Robot, socket_ip: str, control_rate: float=50.):  # Max wait time in milliseconds
     """
     Controller callback.
     Listens for messages from main thread.
@@ -123,7 +103,7 @@ def follow_me(robot: Robot, control_rate: float=50.):  # Max wait time in millis
     # other init
     initial_state = get_state_vector(robot)
 
-    socket, poller = open_socket_listener()
+    socket, poller = open_socket_listener(socket_ip)
 
     while True:
         effort = get_state_vector(robot)
@@ -143,45 +123,5 @@ def follow_me(robot: Robot, control_rate: float=50.):  # Max wait time in millis
                 if message == 'q':
                     break
 
-def main(control_rate=50.):
-    """
-    Entry point for lift control demo.
-    Moves lift proportional to wrist_pitch effort with velocity control.
-    
-    Args:
-        control_rate (float): The control rate in Hz.
-    """
-    
-    # set up robot
-    robot = Robot()
-    robot.startup()
-    
-    # # Start the callback on a separate thread
-    # thread = threading.Thread(target=follow_me, args=(robot, control_rate))
-    # thread.start()
-
-    # Send messages using PyZMQ
-    context = zmq.Context()
-    socket = context.socket(zmq.PUB)
-    socket.connect(SOCKET_IP)
-
-    print('e')
-
-    # Start the callback on a separate thread
-    thread = threading.Thread(target=follow_me, args=(robot, control_rate))
-    thread.start()
-
-    # UI loop
-    while True:
-        message = input("Enter message to send (type 'q' to quit): ")
-        socket.send_string(message)
-        if message.lower() == 'q':
-            robot.base.set_velocity(0, 0)
-            robot.stop()
-            break
-
-    # Wait for the thread to finish
-    thread.join()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    print("This file is not meant to be run directly. Run main.py instead.")
