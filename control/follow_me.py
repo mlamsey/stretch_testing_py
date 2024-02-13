@@ -39,7 +39,7 @@ def compute_velocity(error_vector: List[float], deadband: float=2.0, Kp: List[fl
 
 def get_wrist_effort(robot: Robot) -> np.ndarray:
     """
-    Gets the wrist effort and returns the initial wrist effort and the initial lift velocity.
+    Gets the wrist effort.
 
     Args:
         robot (Robot): The Stretch object.
@@ -55,7 +55,8 @@ def get_wrist_effort(robot: Robot) -> np.ndarray:
 
 def get_arm_effort(robot: Robot) -> float:
     """
-    Gets the arm effort and returns the initial arm effort.
+    Gets the arm extension effort.
+    WARNING: hacked
 
     Args:
         robot (Robot): The Stretch object.
@@ -69,7 +70,7 @@ def get_arm_effort(robot: Robot) -> float:
 
 def get_state_vector(robot: Robot) -> np.ndarray:
     """
-    Gets the state vector and returns the initial state vector.
+    Gets the wrist and arm state vector.
 
     Args:
         robot (Robot): The Stretch object.
