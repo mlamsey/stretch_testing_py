@@ -91,6 +91,7 @@ def follow_me(robot: Robot, socket_ip: str, control_rate: float=50.):  # Max wai
 
     Args:
         robot (Robot): The Stretch object.
+        socket_ip (str): The IP address to communicate with main thread.
         control_rate (float): The control rate in Hz.
     """
 

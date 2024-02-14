@@ -46,10 +46,9 @@ def main(demo_handle, control_rate=50.):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description='Control the lift joint based on the effort of the wrist_pitch joint.')
+    parser = argparse.ArgumentParser(description='Run control demos.')
     
     # parse args
-    parser = argparse.ArgumentParser(description='Control the lift joint based on the effort of the wrist_pitch joint.')
     parser.add_argument('--demo', type=str, default='lift_control', help='The demo to run.')
     parser.add_argument('--control-rate', type=float, default=50., help='The control rate in Hz.')
     args = parser.parse_args()
